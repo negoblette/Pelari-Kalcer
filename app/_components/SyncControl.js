@@ -262,7 +262,7 @@ export default function SyncControl() {
   if (!syncConfigured) return null;
 
   const label = status.user ? LABELS[status.phase] : "Masuk";
-  const problem = status.user && status.phase !== "idle" && status.phase !== "syncing";
+  const dot = { idle: "bg-hijau", syncing: "bg-marka" }[status.phase] ?? "bg-oranye";
 
   return (
     <>
@@ -275,7 +275,7 @@ export default function SyncControl() {
         {status.user && (
           <span
             aria-hidden="true"
-            className={`size-2 rounded-full ${problem ? "bg-oranye" : "bg-marka"}`}
+            className={`size-2 rounded-full ${dot}`}
           />
         )}
         <span className={status.user ? "hidden md:inline" : ""}>{label}</span>

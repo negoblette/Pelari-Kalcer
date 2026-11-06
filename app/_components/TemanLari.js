@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import Avatar from "./Avatar";
+import ChatDialog from "./ChatDialog";
+import FriendProfile from "./FriendProfile";
 import {
   addFriend,
   createProfile,
@@ -8,6 +12,7 @@ import {
   listFriends,
   removeFriend,
   respondFriend,
+  unreadCounts,
   updateProfile,
 } from "./friends";
 import { buildStats, friendView } from "./insights";
@@ -42,22 +47,35 @@ function Shell({ children }) {
   );
 }
 
-function BoardRow({ rank, name, area, view, isMe, onRemove }) {
+function BoardRow({ rank, name, area, avatar, view, isMe, unread, onOpen, onChat, onRemove }) {
   return (
     <li
-      className={`grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 p-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5rem_7rem] ${
+      className={`grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 p-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5rem_10rem] ${
         isMe ? "bg-aspal text-kertas" : "bg-kertas"
       }`}
     >
       <span className="font-display text-4xl font-black leading-none tabular-nums">{rank}</span>
-      <div className="min-w-0">
-        <p className="truncate font-display text-2xl font-black uppercase leading-none">
-          {name}
-          {isMe ? " (kamu)" : ""}
-        </p>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar seed={avatar} size={44} />
+        <div className="min-w-0">
+        {isMe ? (
+          <Link href="/profil" className="block truncate font-display text-2xl font-black uppercase leading-none underline-offset-4 hover:underline">
+            {name} (kamu)
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={`Lihat profil ${name}`}
+            className="block max-w-full truncate text-left font-display text-2xl font-black uppercase leading-none underline underline-offset-4 hover:text-biru"
+          >
+            {name}
+          </button>
+        )}
         <p className="mt-1 truncate font-mono text-xs">
           {[STATUS_LABEL[view.status] ?? "Belum absen", area].filter(Boolean).join(" · ")}
         </p>
+        </div>
       </div>
       <p className="text-right font-display text-3xl font-black leading-none tabular-nums sm:text-left">
         {formatDistance(view.weekKm)}
@@ -68,6 +86,11 @@ function BoardRow({ rank, name, area, view, isMe, onRemove }) {
       </p>
       <div className="col-start-3 row-start-2 flex items-center justify-end gap-3 font-mono text-xs sm:col-start-auto sm:row-start-auto sm:text-sm">
         <span className="whitespace-nowrap">{view.streak} mgg</span>
+        {onChat && (
+          <button type="button" onClick={onChat} aria-label={`Chat dengan ${name}`} className="underline underline-offset-4">
+            Chat{unread ? ` (${unread})` : ""}
+          </button>
+        )}
         {onRemove && (
           <button type="button" onClick={onRemove} aria-label={`Hapus teman ${name}`} className="underline underline-offset-4">
             Hapus
@@ -85,6 +108,9 @@ export default function TemanLari({ today, entries, onToast }) {
   const [phase, setPhase] = useState("loading");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [openFriend, setOpenFriend] = useState(null);
+  const [chatFriend, setChatFriend] = useState(null);
+  const [unread, setUnread] = useState({});
   const [code, setCode] = useState(
     () => new URLSearchParams(window.location.search).get("teman") ?? "",
   );
@@ -97,6 +123,7 @@ export default function TemanLari({ today, entries, onToast }) {
       const mine = await getMyProfile();
       setProfile(mine);
       setFriends(mine ? await listFriends() : []);
+      if (mine) setUnread(await unreadCounts());
       setPhase("ready");
     } catch {
       setPhase("error");
@@ -217,6 +244,7 @@ export default function TemanLari({ today, entries, onToast }) {
       id: "me",
       name: profile.display_name,
       area: profile.area,
+      avatar: profile.avatar,
       view: friendView(buildStats(entries, today), today),
       isMe: true,
     },
@@ -226,7 +254,9 @@ export default function TemanLari({ today, entries, onToast }) {
         id: friend.friend_id,
         name: friend.name,
         area: friend.area,
+        avatar: friend.avatar,
         view: friendView(friend.stats, today),
+        lifetime: friend.stats?.lifetime ?? null,
       })),
   ].sort((a, b) => b.view.weekKm - a.view.weekKm || b.view.streak - a.view.streak);
 
@@ -273,8 +303,12 @@ export default function TemanLari({ today, entries, onToast }) {
                 rank={index + 1}
                 name={row.name}
                 area={row.area}
+                avatar={row.avatar}
                 view={row.view}
                 isMe={row.isMe}
+                unread={unread[row.id]}
+                onOpen={() => setOpenFriend(row)}
+                onChat={row.isMe ? null : () => setChatFriend(row)}
                 onRemove={
                   row.isMe
                     ? null
@@ -339,6 +373,28 @@ export default function TemanLari({ today, entries, onToast }) {
           </button>
         </div>
       </div>
+
+      {openFriend && (
+        <FriendProfile
+          name={openFriend.name}
+          area={openFriend.area}
+          avatar={openFriend.avatar}
+          view={openFriend.view}
+          lifetime={openFriend.lifetime}
+          onClose={() => setOpenFriend(null)}
+        />
+      )}
+
+      {chatFriend && (
+        <ChatDialog
+          friend={chatFriend}
+          userId={userId}
+          onClose={() => {
+            setChatFriend(null);
+            load();
+          }}
+        />
+      )}
     </Shell>
   );
 }

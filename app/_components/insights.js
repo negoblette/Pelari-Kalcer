@@ -7,6 +7,7 @@ import {
   hasDetail,
   isRunEntry,
   mondayOf,
+  personalBests,
   shortDate,
   weekDays,
   weekStreak,
@@ -103,22 +104,34 @@ export function weeklyQuests(entries, plan, today) {
   return quests;
 }
 
+export const BADGE_TITLES = {
+  "lari-pertama": "Lari pertama",
+  "lari-10k": "Sekali lari 10K",
+  "lari-21k": "Sekali lari 21K",
+  "total-100": "Total 100 km",
+  "total-500": "Total 500 km",
+  "streak-4": "Streak 4 minggu",
+  "streak-12": "Streak 12 minggu",
+  "absen-30": "30 kali lari",
+};
+
 export function lifetimeBadges(entries, today) {
   const details = entries.filter((entry) => isRunEntry(entry) && hasDetail(entry));
   const totalKm = details.reduce((sum, entry) => sum + entry.km, 0);
   const longest = details.reduce((top, entry) => Math.max(top, entry.km), 0);
   const runCount = entries.filter(isRunEntry).length;
   const streak = weekStreak(entries, today);
-  return [
-    { id: "lari-pertama", title: "Lari pertama", done: runCount >= 1 },
-    { id: "lari-10k", title: "Sekali lari 10K", done: longest >= 10 },
-    { id: "lari-21k", title: "Sekali lari 21K", done: longest >= 21.1 },
-    { id: "total-100", title: "Total 100 km", done: totalKm >= 100 },
-    { id: "total-500", title: "Total 500 km", done: totalKm >= 500 },
-    { id: "streak-4", title: "Streak 4 minggu", done: streak >= 4 },
-    { id: "streak-12", title: "Streak 12 minggu", done: streak >= 12 },
-    { id: "absen-30", title: "30 kali lari", done: runCount >= 30 },
-  ];
+  const earned = {
+    "lari-pertama": runCount >= 1,
+    "lari-10k": longest >= 10,
+    "lari-21k": longest >= 21.1,
+    "total-100": totalKm >= 100,
+    "total-500": totalKm >= 500,
+    "streak-4": streak >= 4,
+    "streak-12": streak >= 12,
+    "absen-30": runCount >= 30,
+  };
+  return Object.entries(BADGE_TITLES).map(([id, title]) => ({ id, title, done: earned[id] }));
 }
 
 export function raceStatus(race, entries, today) {
@@ -189,6 +202,25 @@ export function buildStats(entries, today) {
     pace: Math.round(summary.pace),
     streak: weekStreak(own, today),
     status: entry ? (isRunEntry(entry) ? "run" : "rest") : null,
+    lifetime: friendLifetime(own, today),
+  };
+}
+
+// Totals and best times only. Dates, routes and notes stay out of what friends receive.
+function friendLifetime(entries, today) {
+  const summary = lifetimeSummary(entries);
+  const timed = entries.filter((entry) => isRunEntry(entry) && entry.seconds > 0);
+  return {
+    km: Math.round(summary.km * 10) / 10,
+    runs: summary.runs,
+    bestStreak: summary.bestStreak,
+    records: personalBests(timed).map((record) => ({
+      label: record.label,
+      time: record.best ? Math.round(record.best.time) : 0,
+    })),
+    badges: lifetimeBadges(entries, today)
+      .filter((badge) => badge.done)
+      .map((badge) => badge.id),
   };
 }
 
@@ -249,6 +281,34 @@ export function lifetimeSummary(entries) {
         km: list.reduce((sum, entry) => sum + (entry.km || 0), 0),
       };
     }),
+  };
+}
+
+// What the AI analysis receives. Notes, routes and gear names stay on the device.
+export function analysisPayload(entries, plan, race, today) {
+  const start = addDays(today, -55);
+  return {
+    today,
+    plannedRunDays: plan.filter((day) => day === "run").length,
+    race: race
+      ? {
+          date: race.date,
+          km: race.km,
+          targetPace: race.targetSeconds ? race.targetSeconds / race.km : 0,
+        }
+      : null,
+    runs: entries
+      .filter((entry) => !entry.sample && entry.date >= start && entry.date <= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((entry) => ({
+        date: entry.date,
+        type: isRunEntry(entry) ? (entry.runType ?? "run") : "rest",
+        km: entry.km,
+        pace: entry.km > 0 && entry.seconds > 0 ? entry.seconds / entry.km : 0,
+        hr: entry.workout?.hr,
+        feel: isRunEntry(entry) ? (entry.feel ?? 0) + 1 : undefined,
+        legs: entry.workout?.legs === undefined ? undefined : entry.workout.legs + 1,
+      })),
   };
 }
 

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import AiCoach from "./AiCoach";
 import Calendar from "./Calendar";
-import Countdown from "./Countdown";
+import Clock from "./Clock";
 import DayForm from "./DayForm";
+import Feed from "./Feed";
 import Gear from "./Gear";
 import InstallButton from "./InstallButton";
 import Quests from "./Quests";
@@ -42,7 +44,9 @@ const LINKS = [
   { href: "#kalender", label: "Kalender" },
   { href: "#quest", label: "Quest" },
   { href: "#race", label: "Race" },
+  { href: "#ai", label: "AI" },
   { href: "#teman", label: "Teman" },
+  { href: "#feed", label: "Feed" },
   { href: "#gear", label: "Gear" },
   { href: "#recap", label: "Recap" },
 ];
@@ -108,7 +112,7 @@ function Hero({ today, entries, onEdit, onRun, syncSlot }) {
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
         <nav aria-label="Utama" className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2 py-5">
           <p className="font-display text-2xl font-black uppercase tracking-wide">Pelari Kalcer</p>
-          <ul className="hidden gap-7 text-sm font-medium md:flex">
+          <ul className="hidden gap-6 text-sm font-medium lg:flex">
             {LINKS.map((link) => (
               <li key={link.href}>
                 <a href={link.href} className="hover:text-marka">
@@ -118,7 +122,7 @@ function Hero({ today, entries, onEdit, onRun, syncSlot }) {
             ))}
           </ul>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Countdown />
+            <Clock />
             <Link href="/profil" className="text-sm font-medium underline underline-offset-4 hover:text-marka">
               Profil
             </Link>
@@ -259,7 +263,9 @@ export default function Tracker() {
       />
       <Quests today={today} entries={entries} plan={prefs.plan} />
       <RaceMode today={today} entries={entries} race={prefs.race} />
+      <AiCoach today={today} entries={entries} plan={prefs.plan} race={prefs.race} onToast={setToast} />
       <TemanLari today={today} entries={entries} onToast={setToast} />
+      <Feed onToast={setToast} />
       <Gear gear={gear} entries={entries} />
       <Recap today={today} entries={entries} gear={gear} onToast={setToast} />
 

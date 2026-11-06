@@ -9,6 +9,7 @@
   --panel: #1e1f25;
   --panel-2: #282a32;
   --terang: #5b78ff;
+  --hijau: #2ee66b;
 }
 
 @theme inline {
@@ -20,6 +21,7 @@
   --color-panel: var(--panel);
   --color-panel-2: var(--panel-2);
   --color-terang: var(--terang);
+  --color-hijau: var(--hijau);
   --font-display: var(--font-big);
   --font-sans: var(--font-instrument);
   --font-mono: var(--font-dm-mono);

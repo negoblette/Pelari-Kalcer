@@ -65,6 +65,7 @@ function initialValues(entry, defaultGearId, forceRun) {
     pace: hasTime ? formatClock(entry.seconds / entry.km) : "",
     time: entry?.seconds ? formatClock(entry.seconds) : "",
     gearId: entry?.gearId ?? defaultGearId ?? "",
+    share: entry?.share !== false,
     feel: entry?.feel ?? 1,
     note: entry?.note ?? "",
     ...workoutValues(entry?.workout, formatClock),
@@ -139,6 +140,7 @@ export default function DayForm({ date, entry, gear, defaultGearId, forceRun, on
       feel: values.feel,
       note: values.note.trim(),
       workout: buildWorkout(values.runType, values),
+      share: values.share,
     });
   }
 
@@ -285,6 +287,16 @@ export default function DayForm({ date, entry, gear, defaultGearId, forceRun, on
                   onChange={(legs) => update({ legs })}
                 />
               )}
+
+              <label className="mt-4 flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={values.share}
+                  onChange={(event) => update({ share: event.target.checked })}
+                  className="size-5 accent-biru"
+                />
+                Tampilkan di feed teman
+              </label>
 
               <Choices
                 label="Rasanya"

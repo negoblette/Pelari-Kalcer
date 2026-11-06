@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { createProfile, getMyProfile, updateProfile } from "./friends";
+import Avatar, { randomAvatar } from "./Avatar";
+import { createProfile, getMyProfile, saveAvatar, updateProfile } from "./friends";
 import { buildStats, lifetimeBadges, lifetimeSummary } from "./insights";
 import ProfileForm from "./ProfileForm";
 import { BadgeList } from "./Quests";
@@ -117,6 +118,16 @@ export default function ProfilePage() {
     setBusy(false);
   }
 
+  async function shuffleAvatar() {
+    const next = randomAvatar(profile.avatar);
+    setProfile({ ...profile, avatar: next });
+    try {
+      await saveAvatar(userId, next);
+    } catch {
+      setLoadFailed(true);
+    }
+  }
+
   return (
     <main>
       <section className="overflow-x-clip bg-biru text-kertas">
@@ -133,6 +144,18 @@ export default function ProfilePage() {
               <p className="mb-4 font-mono text-sm">
                 {summary.firstDate ? `Lari sejak ${fullDate(summary.firstDate)}` : "Belum ada catatan lari"}
               </p>
+              {profile && (
+                <div className="mb-5 flex items-end gap-3">
+                  <Avatar seed={profile.avatar} size={112} />
+                  <button
+                    type="button"
+                    onClick={shuffleAvatar}
+                    className="text-sm font-medium underline underline-offset-4 hover:text-marka"
+                  >
+                    Acak avatar
+                  </button>
+                </div>
+              )}
               <h1 className="font-display text-[19vw] font-black uppercase leading-[0.86] [overflow-wrap:anywhere] lg:text-[min(10.5vw,9.75rem)]">
                 {name}
               </h1>

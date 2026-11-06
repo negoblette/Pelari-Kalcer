@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import { buildStats } from "./insights";
 import { mergeGoal, mergeRuns } from "./merge";
-import { localDateKey } from "./stats";
+import { addDays, hasDetail, isRunEntry, localDateKey } from "./stats";
 import { applySynced, getTracker, onLocalChange, resetTracker } from "./store";
 
 const URL_VALUE = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +12,7 @@ const KEY_VALUE = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const PAGE_SIZE = 1000;
 const PUSH_SIZE = 500;
 const DEBOUNCE_MS = 1500;
+const FEED_DAYS = 14;
 
 export const syncConfigured = Boolean(URL_VALUE && KEY_VALUE);
 
@@ -74,6 +75,56 @@ async function fetchRemoteRuns(supabase) {
   }
 }
 
+function feedRow(entry) {
+  return {
+    run_id: entry.id,
+    run_date: entry.date,
+    run_type: entry.runType ?? "",
+    km: entry.km,
+    pace_seconds: entry.seconds > 0 ? Math.round(entry.seconds / entry.km) : 0,
+  };
+}
+
+// Posts carry type, distance, pace and date only. A failure here never fails the run sync.
+async function publishFeed(supabase) {
+  const since = addDays(localDateKey(new Date()), -FEED_DAYS);
+  const { data: existing, error } = await supabase
+    .from("feed_posts")
+    .select("run_id, run_date, run_type, km, pace_seconds")
+    .gte("run_date", since);
+  if (error) return;
+
+  const wanted = getTracker()
+    .runs.filter(
+      (entry) =>
+        !entry.sample &&
+        entry.share !== false &&
+        entry.date >= since &&
+        isRunEntry(entry) &&
+        hasDetail(entry),
+    )
+    .map(feedRow);
+
+  const posted = new Map(existing.map((row) => [row.run_id, row]));
+  const changed = wanted.filter((row) => {
+    const current = posted.get(row.run_id);
+    return (
+      !current ||
+      current.run_date !== row.run_date ||
+      current.run_type !== row.run_type ||
+      Number(current.km) !== Number(row.km) ||
+      current.pace_seconds !== row.pace_seconds
+    );
+  });
+  if (changed.length) {
+    await supabase.from("feed_posts").upsert(changed, { onConflict: "user_id,run_id" });
+  }
+
+  const keep = new Set(wanted.map((row) => row.run_id));
+  const removed = existing.map((row) => row.run_id).filter((id) => !keep.has(id));
+  if (removed.length) await supabase.from("feed_posts").delete().in("run_id", removed);
+}
+
 async function runSync() {
   const supabase = getClient();
   const user = status.user;
@@ -129,6 +180,7 @@ async function runSync() {
   }
 
   await publishStats(supabase, user.id);
+  await publishFeed(supabase);
 }
 
 export async function syncNow() {
