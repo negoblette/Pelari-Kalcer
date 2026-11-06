@@ -11,6 +11,9 @@ import {
   verifyLoginCode,
 } from "./sync";
 
+// Matches the Email OTP Length setting in Supabase.
+const CODE_LENGTH = 8;
+
 const LABELS = {
   idle: "Tersinkron",
   syncing: "Menyinkronkan",
@@ -30,6 +33,7 @@ function SyncDialog({ status, onClose }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
+  const [codeFocused, setCodeFocused] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,22 +61,29 @@ function SyncDialog({ status, onClose }) {
     setBusy(false);
   }
 
-  async function handleVerify(event) {
-    event.preventDefault();
+  async function verify(token) {
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
-      await verifyLoginCode(email.trim(), code.trim());
+      await verifyLoginCode(email.trim(), token);
       setBusy(false);
       onClose();
     } catch (failure) {
       setBusy(false);
+      setCode("");
       setError(
         failure?.status === 429
           ? "Terlalu banyak percobaan. Tunggu beberapa menit."
           : "Kode salah atau sudah kedaluwarsa. Periksa lagi atau minta kode baru.",
       );
     }
+  }
+
+  function changeCode(value) {
+    const digits = value.replace(/\D/g, "").slice(0, CODE_LENGTH);
+    setCode(digits);
+    if (digits.length === CODE_LENGTH) verify(digits);
   }
 
   async function handleSignOut() {
@@ -97,7 +108,7 @@ function SyncDialog({ status, onClose }) {
 
       {status.user ? (
         <>
-          <p className="mt-4 break-all font-medium">{status.user.email}</p>
+          <p className="mt-4 font-medium [overflow-wrap:anywhere]">{status.user.email}</p>
           <p className="mt-1 text-sm text-aspal/70">
             {status.lastSyncedAt
               ? `Terakhir tersinkron ${formatTime(status.lastSyncedAt)}`
@@ -128,24 +139,50 @@ function SyncDialog({ status, onClose }) {
           </div>
         </>
       ) : sent ? (
-        <form onSubmit={handleVerify}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            verify(code);
+          }}
+        >
           <p className="mt-3 leading-relaxed text-aspal/80">
-            Kode masuk dikirim ke <strong className="break-all">{email}</strong>. Salin dari
-            email, lalu ketik di sini.
+            Kode masuk dikirim ke
+            <strong className="block [overflow-wrap:anywhere]">{email}</strong>
+            Salin dari email, lalu ketik di sini.
           </p>
           <label className="mt-5 block font-mono text-xs text-aspal/70">
             Kode masuk
-            <input
-              required
-              autoFocus
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]*"
-              maxLength={10}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-              className="mt-1.5 h-14 w-full rounded-md border-2 border-aspal bg-white px-3 text-center font-display text-4xl font-black tracking-[0.2em] text-aspal outline-none focus:border-biru"
-            />
+            <span className="relative mt-1.5 block">
+              <input
+                required
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={CODE_LENGTH}
+                aria-label={`Kode masuk ${CODE_LENGTH} digit`}
+                value={code}
+                readOnly={busy}
+                onChange={(event) => changeCode(event.target.value)}
+                onFocus={() => setCodeFocused(true)}
+                onBlur={() => setCodeFocused(false)}
+                className="absolute inset-0 z-10 h-full w-full text-base opacity-0 outline-none"
+              />
+              <span aria-hidden="true" className="grid grid-cols-8 gap-1">
+                {Array.from({ length: CODE_LENGTH }, (_, index) => (
+                  <span
+                    key={index}
+                    className={`flex aspect-[3/4] items-center justify-center border-2 bg-white font-display text-3xl font-black text-aspal ${
+                      codeFocused && index === Math.min(code.length, CODE_LENGTH - 1)
+                        ? "border-biru outline-2 -outline-offset-4 outline-biru"
+                        : "border-aspal"
+                    }`}
+                  >
+                    {code[index] ?? ""}
+                  </span>
+                ))}
+              </span>
+            </span>
           </label>
           <div className="mt-6 flex items-center justify-between gap-3">
             <button
@@ -160,7 +197,7 @@ function SyncDialog({ status, onClose }) {
             </button>
             <button
               type="submit"
-              disabled={busy || !code}
+              disabled={busy || code.length < CODE_LENGTH}
               className="h-11 rounded-md bg-oranye px-5 font-display text-xl font-extrabold uppercase text-aspal hover:bg-biru hover:text-kertas disabled:opacity-50"
             >
               {busy ? "Memeriksa" : "Masuk"}
