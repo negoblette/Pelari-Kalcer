@@ -2,9 +2,15 @@
 
 import { getSupabase } from "./sync";
 
+export const FRIENDS_CHANGED = "pelari:teman-berubah";
+
 function unwrap({ data, error }) {
   if (error) throw error;
   return data;
+}
+
+function announceChange() {
+  window.dispatchEvent(new Event(FRIENDS_CHANGED));
 }
 
 export async function getMyProfile() {
@@ -22,6 +28,7 @@ export async function createProfile(name, area, stats) {
       .from("profiles")
       .insert({ display_name: name, area, stats }),
   );
+  announceChange();
 }
 
 export async function updateProfile(userId, name, area) {
@@ -31,10 +38,6 @@ export async function updateProfile(userId, name, area) {
       .update({ display_name: name, area, updated_at: new Date().toISOString() })
       .eq("user_id", userId),
   );
-}
-
-export async function saveAvatar(userId, avatar) {
-  unwrap(await getSupabase().from("profiles").update({ avatar }).eq("user_id", userId));
 }
 
 export async function listFriends() {
@@ -47,6 +50,7 @@ export async function addFriend(code) {
 
 export async function respondFriend(friend, accept) {
   unwrap(await getSupabase().rpc("respond_friend", { friend, accept }));
+  announceChange();
 }
 
 export async function removeFriend(friend) {
@@ -99,6 +103,7 @@ export async function sendMessage(recipient, body) {
 
 export async function markRead(friend) {
   unwrap(await getSupabase().rpc("mark_read", { friend }));
+  announceChange();
 }
 
 export async function unreadCounts() {

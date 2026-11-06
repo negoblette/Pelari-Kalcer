@@ -181,9 +181,9 @@ export default function Gear({ gear, entries }) {
 
       <div className="mx-auto max-w-[1400px] px-4 py-20 sm:px-8 lg:py-24">
         <div className="flex flex-wrap items-end justify-between gap-6">
-          <h2 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
+          <h1 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
             Gear saya
-          </h2>
+          </h1>
           <button
             type="button"
             onClick={() => setForm({ item: null })}

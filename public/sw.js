@@ -1,7 +1,8 @@
-const CACHE = "pelari-kalcer-v2";
+const CACHE = "pelari-kalcer-v3";
+const PAGES = ["/", "/latihan", "/gear", "/teman", "/feed", "/profil"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.add("/")));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PAGES)));
   self.skipWaiting();
 });
 

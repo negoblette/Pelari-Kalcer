@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import Avatar from "./Avatar";
-import ChatDialog from "./ChatDialog";
+import ChatPanel from "./ChatPanel";
 import FriendProfile from "./FriendProfile";
 import {
   addFriend,
@@ -13,7 +13,6 @@ import {
   removeFriend,
   respondFriend,
   unreadCounts,
-  updateProfile,
 } from "./friends";
 import { buildStats, friendView } from "./insights";
 import ProfileForm from "./ProfileForm";
@@ -31,50 +30,97 @@ const ADD_MESSAGES = {
 const FIELD =
   "mt-1.5 h-12 w-full border-2 border-aspal bg-white px-3 text-base text-aspal outline-none focus:border-biru";
 const LABEL = "block font-mono text-xs";
+const REFRESH_MS = 20000;
 const BUTTON =
   "h-12 bg-aspal px-6 font-display text-2xl font-extrabold uppercase text-kertas transition-colors hover:bg-biru disabled:opacity-50";
 
 function Shell({ children }) {
   return (
-    <section id="teman" className="scroll-mt-4 bg-marka py-16 text-aspal lg:py-24">
+    <section className="min-h-[70dvh] bg-marka py-12 text-aspal lg:py-16">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
-        <h2 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
-          Teman lari
-        </h2>
+        <h1 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
+          Teman
+        </h1>
         {children}
       </div>
     </section>
   );
 }
 
-function BoardRow({ rank, name, area, avatar, view, isMe, unread, onOpen, onChat, onRemove }) {
+function statusLine(view, area) {
+  return [STATUS_LABEL[view.status] ?? "Belum absen", area].filter(Boolean).join(" · ");
+}
+
+function FriendRow({ friend, active, unread, onChat, onOpen, onRemove }) {
+  return (
+    <li className={`flex items-center gap-3 p-3 ${active ? "bg-aspal text-kertas" : "bg-kertas"}`}>
+      <button
+        type="button"
+        onClick={onChat}
+        aria-label={`Chat dengan ${friend.name}${unread ? `, ${unread} pesan baru` : ""}`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+      >
+        <Avatar seed={friend.avatar} size={48} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-display text-2xl font-black uppercase leading-none">
+            {friend.name}
+          </span>
+          <span className="mt-1 block truncate font-mono text-xs">{statusLine(friend.view, friend.area)}</span>
+        </span>
+        {unread > 0 && (
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-oranye px-1.5 font-mono text-xs text-aspal">
+            {unread}
+          </span>
+        )}
+      </button>
+      <div className="flex flex-col items-end gap-1 font-mono text-xs">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Lihat profil ${friend.name}`}
+          className="underline underline-offset-4"
+        >
+          Profil
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Hapus teman ${friend.name}`}
+          className="underline underline-offset-4"
+        >
+          Hapus
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function BoardRow({ rank, name, area, avatar, view, isMe, onOpen }) {
   return (
     <li
-      className={`grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 p-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5rem_10rem] ${
-        isMe ? "bg-aspal text-kertas" : "bg-kertas"
+      className={`grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 p-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5rem_4rem] ${
+        isMe ? "bg-aspal text-kertas" : "bg-marka"
       }`}
     >
       <span className="font-display text-4xl font-black leading-none tabular-nums">{rank}</span>
       <div className="flex min-w-0 items-center gap-3">
         <Avatar seed={avatar} size={44} />
         <div className="min-w-0">
-        {isMe ? (
-          <Link href="/profil" className="block truncate font-display text-2xl font-black uppercase leading-none underline-offset-4 hover:underline">
-            {name} (kamu)
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpen}
-            aria-label={`Lihat profil ${name}`}
-            className="block max-w-full truncate text-left font-display text-2xl font-black uppercase leading-none underline underline-offset-4 hover:text-biru"
-          >
-            {name}
-          </button>
-        )}
-        <p className="mt-1 truncate font-mono text-xs">
-          {[STATUS_LABEL[view.status] ?? "Belum absen", area].filter(Boolean).join(" · ")}
-        </p>
+          {isMe ? (
+            <Link href="/profil" className="block truncate font-display text-2xl font-black uppercase leading-none underline-offset-4 hover:underline">
+              {name} (kamu)
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label={`Lihat profil ${name}`}
+              className="block max-w-full truncate text-left font-display text-2xl font-black uppercase leading-none underline underline-offset-4 hover:text-biru"
+            >
+              {name}
+            </button>
+          )}
+          <p className="mt-1 truncate font-mono text-xs">{statusLine(view, area)}</p>
         </div>
       </div>
       <p className="text-right font-display text-3xl font-black leading-none tabular-nums sm:text-left">
@@ -84,19 +130,9 @@ function BoardRow({ rank, name, area, avatar, view, isMe, unread, onOpen, onChat
       <p className="col-start-2 font-mono text-xs sm:col-start-auto sm:text-sm">
         {view.pace ? `${formatClock(view.pace)}/km` : "Pace –"}
       </p>
-      <div className="col-start-3 row-start-2 flex items-center justify-end gap-3 font-mono text-xs sm:col-start-auto sm:row-start-auto sm:text-sm">
-        <span className="whitespace-nowrap">{view.streak} mgg</span>
-        {onChat && (
-          <button type="button" onClick={onChat} aria-label={`Chat dengan ${name}`} className="underline underline-offset-4">
-            Chat{unread ? ` (${unread})` : ""}
-          </button>
-        )}
-        {onRemove && (
-          <button type="button" onClick={onRemove} aria-label={`Hapus teman ${name}`} className="underline underline-offset-4">
-            Hapus
-          </button>
-        )}
-      </div>
+      <p className="col-start-3 row-start-2 whitespace-nowrap text-right font-mono text-xs sm:col-start-auto sm:row-start-auto sm:text-sm">
+        {view.streak} mgg
+      </p>
     </li>
   );
 }
@@ -106,7 +142,6 @@ export default function TemanLari({ today, entries, onToast }) {
   const [profile, setProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [phase, setPhase] = useState("loading");
-  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [openFriend, setOpenFriend] = useState(null);
   const [chatFriend, setChatFriend] = useState(null);
@@ -126,28 +161,31 @@ export default function TemanLari({ today, entries, onToast }) {
       if (mine) setUnread(await unreadCounts());
       setPhase("ready");
     } catch {
-      setPhase("error");
+      setPhase((current) => (current === "ready" ? current : "error"));
     }
   }, [userId]);
 
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => active && load());
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, REFRESH_MS);
     window.addEventListener("focus", load);
     return () => {
       active = false;
+      clearInterval(timer);
       window.removeEventListener("focus", load);
     };
   }, [load]);
 
-  if (!syncConfigured) return null;
-
-  if (!user) {
+  if (!syncConfigured || !user) {
     return (
       <Shell>
         <p className="mt-5 max-w-lg text-lg leading-relaxed">
-          Masuk lewat tombol di bagian atas halaman untuk berteman dan membandingkan
-          streak mingguan.
+          {syncConfigured
+            ? "Masuk lewat tombol di bagian atas halaman untuk berteman dan chat."
+            : "Fitur teman belum aktif di perangkat ini."}
         </p>
       </Shell>
     );
@@ -184,26 +222,13 @@ export default function TemanLari({ today, entries, onToast }) {
   }
 
   async function saveProfile(name, area) {
-    await run(
-      () =>
-        profile
-          ? updateProfile(userId, name, area)
-          : createProfile(name, area, buildStats(entries, today)),
-      "Profil tersimpan.",
-    );
-    setEditing(false);
+    await run(() => createProfile(name, area, buildStats(entries, today)), "Profil tersimpan.");
   }
 
-  if (!profile || editing) {
+  if (!profile) {
     return (
       <Shell>
-        <ProfileForm
-          key={profile?.friend_code ?? "new"}
-          profile={profile}
-          busy={busy}
-          onSave={saveProfile}
-          onCancel={profile ? () => setEditing(false) : null}
-        />
+        <ProfileForm profile={null} busy={busy} onSave={saveProfile} />
       </Shell>
     );
   }
@@ -223,7 +248,7 @@ export default function TemanLari({ today, entries, onToast }) {
   }
 
   async function handleInvite() {
-    const url = `${window.location.origin}/?teman=${profile.friend_code}`;
+    const url = `${window.location.origin}/teman?teman=${profile.friend_code}`;
     const text = `Yuk jadi teman lari di Pelari Kalcer. Kode saya: ${profile.friend_code}`;
     if (navigator.share) {
       try {
@@ -239,6 +264,17 @@ export default function TemanLari({ today, entries, onToast }) {
 
   const incoming = friends.filter((friend) => friend.state === "incoming");
   const outgoing = friends.filter((friend) => friend.state === "outgoing");
+  const accepted = friends
+    .filter((friend) => friend.state === "accepted")
+    .map((friend) => ({
+      id: friend.friend_id,
+      name: friend.name,
+      area: friend.area,
+      avatar: friend.avatar,
+      view: friendView(friend.stats, today),
+      lifetime: friend.stats?.lifetime ?? null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "id"));
   const board = [
     {
       id: "me",
@@ -248,131 +284,156 @@ export default function TemanLari({ today, entries, onToast }) {
       view: friendView(buildStats(entries, today), today),
       isMe: true,
     },
-    ...friends
-      .filter((friend) => friend.state === "accepted")
-      .map((friend) => ({
-        id: friend.friend_id,
-        name: friend.name,
-        area: friend.area,
-        avatar: friend.avatar,
-        view: friendView(friend.stats, today),
-        lifetime: friend.stats?.lifetime ?? null,
-      })),
+    ...accepted,
   ].sort((a, b) => b.view.weekKm - a.view.weekKm || b.view.streak - a.view.streak);
 
+  function confirmRemove(friend) {
+    if (!window.confirm(`Hapus ${friend.name} dari teman?`)) return;
+    if (chatFriend?.id === friend.id) setChatFriend(null);
+    run(() => removeFriend(friend.id));
+  }
+
   return (
-    <Shell>
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-        <div>
-          <p className="font-mono text-sm">Papan minggu ini · reset setiap Senin</p>
-
-          {incoming.length > 0 && (
-            <ul className="mt-4 space-y-2">
-              {incoming.map((friend) => (
-                <li key={friend.friend_id} className="flex flex-wrap items-center justify-between gap-3 bg-biru p-4 text-kertas">
-                  <p className="font-display text-2xl font-black uppercase leading-none">
-                    {friend.name} ingin berteman
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => run(() => respondFriend(friend.friend_id, true), "Kalian sudah berteman.")}
-                      className="h-10 bg-kertas px-4 font-display text-xl font-extrabold uppercase text-biru"
-                    >
-                      Terima
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => run(() => respondFriend(friend.friend_id, false))}
-                      className="h-10 px-3 font-medium underline underline-offset-4"
-                    >
-                      Tolak
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <ol className="mt-4 space-y-2">
-            {board.map((row, index) => (
-              <BoardRow
-                key={row.id}
-                rank={index + 1}
-                name={row.name}
-                area={row.area}
-                avatar={row.avatar}
-                view={row.view}
-                isMe={row.isMe}
-                unread={unread[row.id]}
-                onOpen={() => setOpenFriend(row)}
-                onChat={row.isMe ? null : () => setChatFriend(row)}
-                onRemove={
-                  row.isMe
-                    ? null
-                    : () => {
-                        if (window.confirm(`Hapus ${row.name} dari teman?`)) {
-                          run(() => removeFriend(row.id));
-                        }
-                      }
-                }
-              />
+    <>
+      <Shell>
+        {incoming.length > 0 && (
+          <ul className="mt-6 space-y-2">
+            {incoming.map((friend) => (
+              <li key={friend.friend_id} className="flex flex-wrap items-center justify-between gap-3 bg-biru p-4 text-kertas">
+                <p className="font-display text-2xl font-black uppercase leading-none">
+                  {friend.name} ingin berteman
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => respondFriend(friend.friend_id, true), "Kalian sudah berteman.")}
+                    className="h-10 bg-kertas px-4 font-display text-xl font-extrabold uppercase text-biru"
+                  >
+                    Terima
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => respondFriend(friend.friend_id, false))}
+                    className="h-10 px-3 font-medium underline underline-offset-4"
+                  >
+                    Tolak
+                  </button>
+                </div>
+              </li>
             ))}
-          </ol>
+          </ul>
+        )}
 
-          {outgoing.length > 0 && (
-            <p className="mt-3 font-mono text-sm">
-              {outgoing.length} permintaan menunggu persetujuan
-            </p>
-          )}
-          {board.length === 1 && (
-            <p className="mt-4 max-w-lg leading-relaxed">
-              Masih sendirian. Bagikan kodemu, atau masukkan kode teman di samping.
-            </p>
-          )}
-        </div>
+        <div className="mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-[24rem_minmax(0,1fr)]">
+          <div className={chatFriend ? "hidden lg:block" : ""}>
+            <p className="font-mono text-sm">Daftar teman · {accepted.length}</p>
 
-        <div className="bg-kertas p-5 sm:p-6">
-          <p className="font-mono text-xs">Kode kamu</p>
-          <p className="mt-1 font-display text-6xl font-black tracking-wide">{profile.friend_code}</p>
-          <button type="button" onClick={handleInvite} className={`${BUTTON} mt-4 w-full`}>
-            Undang teman
-          </button>
+            {accepted.length > 0 ? (
+              <ul className="mt-3 space-y-2">
+                {accepted.map((friend) => (
+                  <FriendRow
+                    key={friend.id}
+                    friend={friend}
+                    active={chatFriend?.id === friend.id}
+                    unread={chatFriend?.id === friend.id ? 0 : unread[friend.id]}
+                    onChat={() => setChatFriend(friend)}
+                    onOpen={() => setOpenFriend(friend)}
+                    onRemove={() => confirmRemove(friend)}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 leading-relaxed">
+                Masih sendirian. Bagikan kodemu, atau masukkan kode teman di bawah.
+              </p>
+            )}
 
-          <form onSubmit={handleAdd} className="mt-6 border-t-2 border-aspal pt-5">
-            <label className={LABEL}>
-              Kode teman
-              <input
-                required
-                maxLength={8}
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
-                className={`${FIELD} font-mono tracking-widest`}
+            {outgoing.length > 0 && (
+              <p className="mt-3 font-mono text-sm">
+                {outgoing.length} permintaan menunggu persetujuan
+              </p>
+            )}
+
+            <div className="mt-4 bg-kertas p-5">
+              <p className="font-mono text-xs">Kode kamu</p>
+              <p className="mt-1 font-display text-5xl font-black tracking-wide">{profile.friend_code}</p>
+              <button type="button" onClick={handleInvite} className={`${BUTTON} mt-3 w-full`}>
+                Undang teman
+              </button>
+
+              <form onSubmit={handleAdd} className="mt-5 border-t-2 border-aspal pt-4">
+                <label className={LABEL}>
+                  Kode teman
+                  <input
+                    required
+                    maxLength={8}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.toUpperCase())}
+                    className={`${FIELD} font-mono tracking-widest`}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={busy || !code.trim()}
+                  className="mt-3 h-12 w-full bg-biru font-display text-2xl font-extrabold uppercase text-kertas transition-colors hover:bg-aspal disabled:opacity-50"
+                >
+                  Tambah teman
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className={`lg:sticky lg:top-20 ${chatFriend ? "" : "hidden lg:block"}`}>
+            {chatFriend ? (
+              <ChatPanel
+                key={chatFriend.id}
+                friend={chatFriend}
+                userId={userId}
+                onClose={() => {
+                  setChatFriend(null);
+                  load();
+                }}
               />
-            </label>
-            <button
-              type="submit"
-              disabled={busy || !code.trim()}
-              className="mt-3 h-12 w-full bg-biru font-display text-2xl font-extrabold uppercase text-kertas transition-colors hover:bg-aspal disabled:opacity-50"
-            >
-              Tambah teman
-            </button>
-          </form>
-
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="mt-4 text-sm font-medium underline underline-offset-4"
-          >
-            Ubah nama dan area
-          </button>
+            ) : (
+              <div className="flex h-[min(38rem,calc(100dvh-7.5rem))] items-center justify-center bg-kertas p-6 text-center">
+                <p className="font-display text-4xl font-black uppercase leading-none">
+                  {accepted.length ? "Pilih teman untuk chat" : "Chat muncul di sini"}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Shell>
+
+      {board.length > 1 && (
+        <section className={`bg-kertas py-12 text-aspal lg:block lg:py-16 ${chatFriend ? "hidden" : ""}`}>
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
+            <h2 className="font-display text-[clamp(3rem,6vw,5rem)] font-black uppercase leading-[0.88]">
+              Papan minggu ini
+            </h2>
+            <p className="mt-2 font-mono text-sm">Reset setiap Senin</p>
+            <ol className="mt-5 space-y-2">
+              {board.map((row, index) => (
+                <BoardRow
+                  key={row.id}
+                  rank={index + 1}
+                  name={row.name}
+                  area={row.area}
+                  avatar={row.avatar}
+                  view={row.view}
+                  isMe={row.isMe}
+                  onOpen={() => setOpenFriend(row)}
+                />
+              ))}
+            </ol>
+          </div>
+        </section>
+      )}
 
       {openFriend && (
         <FriendProfile
@@ -384,17 +445,6 @@ export default function TemanLari({ today, entries, onToast }) {
           onClose={() => setOpenFriend(null)}
         />
       )}
-
-      {chatFriend && (
-        <ChatDialog
-          friend={chatFriend}
-          userId={userId}
-          onClose={() => {
-            setChatFriend(null);
-            load();
-          }}
-        />
-      )}
-    </Shell>
+    </>
   );
 }

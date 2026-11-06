@@ -3,7 +3,7 @@ const PALETTES = [
   { bg: "#ff5a1f", face: "#f4f1e8", accent: "#1e3bff", ink: "#15161a" },
   { bg: "#ffd400", face: "#15161a", accent: "#ff5a1f", ink: "#f4f1e8" },
   { bg: "#15161a", face: "#ffd400", accent: "#ff5a1f", ink: "#15161a" },
-  { bg: "#f4f1e8", face: "#1e3bff", accent: "#ffd400", ink: "#f4f1e8" },
+  { bg: "#ff5a1f", face: "#1e3bff", accent: "#ffd400", ink: "#f4f1e8" },
   { bg: "#1e3bff", face: "#ffd400", accent: "#f4f1e8", ink: "#15161a" },
 ];
 
@@ -192,20 +192,12 @@ const ANIMALS = [
   },
 ];
 
-export const AVATAR_COUNT = ANIMALS.length * PALETTES.length;
-
-export function avatarParts(seed) {
+function avatarParts(seed) {
   const value = Math.abs(Number(seed) || 0);
   return {
     animal: ANIMALS[value % ANIMALS.length],
     palette: PALETTES[Math.floor(value / ANIMALS.length) % PALETTES.length],
   };
-}
-
-export function randomAvatar(current) {
-  let next = current;
-  while (next === current) next = Math.floor(Math.random() * 1000000);
-  return next;
 }
 
 export default function Avatar({ seed, size = 48, className = "" }) {
@@ -218,10 +210,10 @@ export default function Avatar({ seed, size = 48, className = "" }) {
       height={size}
       role="img"
       aria-label={`Avatar ${animal.label}`}
-      className={`shrink-0 ${className}`}
+      className={`shrink-0 rounded-full ${className}`}
     >
-      <rect width="64" height="64" fill={palette.bg} />
-      {animal.draw(palette)}
+      <circle cx="32" cy="32" r="32" fill={palette.bg} />
+      <g transform="translate(32 32) scale(0.82) translate(-32 -32)">{animal.draw(palette)}</g>
     </svg>
   );
 }

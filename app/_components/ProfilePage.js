@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import Avatar, { randomAvatar } from "./Avatar";
-import { createProfile, getMyProfile, saveAvatar, updateProfile } from "./friends";
+import AppShell from "./AppShell";
+import Avatar from "./Avatar";
+import { createProfile, getMyProfile, updateProfile } from "./friends";
 import { buildStats, lifetimeBadges, lifetimeSummary } from "./insights";
 import ProfileForm from "./ProfileForm";
 import { BadgeList } from "./Quests";
@@ -16,9 +16,7 @@ import {
   personalBests,
   shortDate,
 } from "./stats";
-import { useToday, useTracker } from "./store";
 import { useSyncStatus } from "./sync";
-import SyncControl from "./SyncControl";
 
 function ProfileBib({ name, summary, badges }) {
   return (
@@ -67,9 +65,7 @@ function Item({ label, value, detail }) {
   );
 }
 
-export default function ProfilePage() {
-  const tracker = useTracker();
-  const today = useToday();
+function Profile({ today, allEntries }) {
   const { user } = useSyncStatus();
   const [profile, setProfile] = useState(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -93,11 +89,7 @@ export default function ProfilePage() {
     };
   }, [userId]);
 
-  if (!tracker || !today) {
-    return <main className="min-h-dvh bg-biru" aria-busy="true" />;
-  }
-
-  const entries = tracker.runs.filter((entry) => !entry.sample);
+  const entries = allEntries.filter((entry) => !entry.sample);
   const summary = lifetimeSummary(entries);
   const badges = lifetimeBadges(entries, today);
   const earned = badges.filter((badge) => badge.done).length;
@@ -118,44 +110,16 @@ export default function ProfilePage() {
     setBusy(false);
   }
 
-  async function shuffleAvatar() {
-    const next = randomAvatar(profile.avatar);
-    setProfile({ ...profile, avatar: next });
-    try {
-      await saveAvatar(userId, next);
-    } catch {
-      setLoadFailed(true);
-    }
-  }
-
   return (
-    <main>
+    <>
       <section className="overflow-x-clip bg-biru text-kertas">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
-          <nav aria-label="Utama" className="flex items-center justify-between gap-4 py-5">
-            <Link href="/" className="font-display text-2xl font-black uppercase tracking-wide hover:text-marka">
-              ‹ Dashboard
-            </Link>
-            <SyncControl />
-          </nav>
-
           <div className="grid items-center gap-x-12 gap-y-14 pb-20 pt-8 lg:grid-cols-[1.3fr_1fr] lg:pt-12">
             <div className="min-w-0">
               <p className="mb-4 font-mono text-sm">
                 {summary.firstDate ? `Lari sejak ${fullDate(summary.firstDate)}` : "Belum ada catatan lari"}
               </p>
-              {profile && (
-                <div className="mb-5 flex items-end gap-3">
-                  <Avatar seed={profile.avatar} size={112} />
-                  <button
-                    type="button"
-                    onClick={shuffleAvatar}
-                    className="text-sm font-medium underline underline-offset-4 hover:text-marka"
-                  >
-                    Acak avatar
-                  </button>
-                </div>
-              )}
+              {profile && <Avatar seed={profile.avatar} size={112} className="mb-5 ring-4 ring-kertas" />}
               <h1 className="font-display text-[19vw] font-black uppercase leading-[0.86] [overflow-wrap:anywhere] lg:text-[min(10.5vw,9.75rem)]">
                 {name}
               </h1>
@@ -279,6 +243,12 @@ export default function ProfilePage() {
           <BadgeList badges={badges} className="mt-6 grid grid-cols-2 gap-2 lg:grid-cols-4" />
         </div>
       </section>
-    </main>
+    </>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <AppShell>{({ today, entries }) => <Profile today={today} allEntries={entries} />}</AppShell>
   );
 }

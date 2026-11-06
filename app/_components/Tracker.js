@@ -1,21 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import AiCoach from "./AiCoach";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import AppShell from "./AppShell";
 import Calendar from "./Calendar";
-import Clock from "./Clock";
 import DayForm from "./DayForm";
-import Feed from "./Feed";
-import Gear from "./Gear";
-import InstallButton from "./InstallButton";
-import Quests from "./Quests";
-import RaceMode from "./RaceMode";
-import Recap from "./Recap";
 import RunConditions from "./RunConditions";
-import WeekPlan from "./WeekPlan";
-import SyncControl from "./SyncControl";
-import TemanLari from "./TemanLari";
 import TrackerBib from "./TrackerBib";
 import {
   entryForDate,
@@ -28,28 +18,7 @@ import {
   weekDays,
   weekStreak,
 } from "./stats";
-import {
-  checkIn,
-  deleteRun,
-  exportData,
-  importData,
-  removeSampleRuns,
-  saveRun,
-  useToday,
-  useTracker,
-} from "./store";
-
-const LINKS = [
-  { href: "#rencana", label: "Rencana" },
-  { href: "#kalender", label: "Kalender" },
-  { href: "#quest", label: "Quest" },
-  { href: "#race", label: "Race" },
-  { href: "#ai", label: "AI" },
-  { href: "#teman", label: "Teman" },
-  { href: "#feed", label: "Feed" },
-  { href: "#gear", label: "Gear" },
-  { href: "#recap", label: "Recap" },
-];
+import { checkIn, deleteRun, saveRun } from "./store";
 
 const PRIMARY =
   "h-16 bg-kertas px-8 font-display text-3xl font-extrabold uppercase text-biru transition-colors hover:bg-marka hover:text-aspal";
@@ -100,7 +69,7 @@ function TodayCheckIn({ today, entry, onEdit, onRun }) {
   );
 }
 
-function Hero({ today, entries, onEdit, onRun, syncSlot }) {
+function Hero({ today, entries, onEdit, onRun }) {
   const entry = entryForDate(entries, today);
   const week = weekDays(entries, today);
   const streak = weekStreak(entries, today);
@@ -110,26 +79,6 @@ function Hero({ today, entries, onEdit, onRun, syncSlot }) {
   return (
     <section className="overflow-x-clip bg-biru text-kertas">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
-        <nav aria-label="Utama" className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2 py-5">
-          <p className="font-display text-2xl font-black uppercase tracking-wide">Pelari Kalcer</p>
-          <ul className="hidden gap-6 text-sm font-medium lg:flex">
-            {LINKS.map((link) => (
-              <li key={link.href}>
-                <a href={link.href} className="hover:text-marka">
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Clock />
-            <Link href="/profil" className="text-sm font-medium underline underline-offset-4 hover:text-marka">
-              Profil
-            </Link>
-            {syncSlot}
-          </div>
-        </nav>
-
         <div className="grid items-center gap-x-12 gap-y-14 pb-20 pt-8 lg:grid-cols-[1.3fr_1fr] lg:pt-12">
           <div>
             <p className="mb-4 font-mono text-sm">{fullDate(today)}</p>
@@ -161,63 +110,21 @@ function Hero({ today, entries, onEdit, onRun, syncSlot }) {
   );
 }
 
-function DataLinks({ onToast }) {
-  const fileRef = useRef(null);
-
-  async function handleImport(event) {
-    const file = event.target.files[0];
-    event.target.value = "";
-    if (!file) return;
-    try {
-      const count = await importData(file);
-      onToast({ message: `${count} catatan berhasil diimpor.` });
-    } catch {
-      onToast({ message: "File tidak bisa dibaca. Gunakan hasil ekspor tracker ini." });
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap gap-5">
-      <InstallButton onToast={onToast} />
-      <button type="button" onClick={exportData} className="underline underline-offset-4 hover:text-marka">
-        Ekspor cadangan
-      </button>
-      <button
-        type="button"
-        onClick={() => fileRef.current.click()}
-        className="underline underline-offset-4 hover:text-marka"
-      >
-        Impor cadangan
-      </button>
-      <input ref={fileRef} type="file" accept="application/json" hidden onChange={handleImport} />
-    </div>
-  );
-}
-
-export default function Tracker() {
-  const tracker = useTracker();
-  const today = useToday();
+function Dashboard({ today, entries, gear, onToast }) {
+  const router = useRouter();
   const [pickedDate, setPickedDate] = useState(null);
   const [form, setForm] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 6000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  if (!tracker || !today) {
-    return <main className="min-h-dvh bg-biru" aria-busy="true" />;
-  }
-
-  const { runs: entries, gear, prefs, saveError } = tracker;
   const selected = pickedDate ?? today;
-  const hasSample = entries.some((entry) => entry.sample);
+
+  // Invite links shared before the Teman page existed still point here.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("teman");
+    if (code) router.replace(`/teman?teman=${encodeURIComponent(code)}`);
+  }, [router]);
 
   function handleDelete(entry) {
     deleteRun(entry.id);
-    setToast({
+    onToast({
       message: `Absen ${fullDate(entry.date)} dihapus.`,
       undo: () => saveRun(entry),
     });
@@ -229,28 +136,13 @@ export default function Tracker() {
   function handleSave(entry) {
     saveRun(entry);
     setForm(null);
-    setToast({ message: `Absen ${fullDate(entry.date)} tersimpan.` });
+    onToast({ message: `Absen ${fullDate(entry.date)} tersimpan.` });
   }
 
   return (
-    <main>
-      {saveError && (
-        <p role="alert" className="bg-oranye px-4 py-3 text-center font-medium text-aspal">
-          Browser menolak menyimpan data. Ekspor cadangan sekarang sebelum menutup halaman.
-        </p>
-      )}
-      {hasSample && (
-        <p className="bg-marka px-4 py-2 text-center text-sm font-medium text-aspal">
-          Masih ada data contoh dari versi sebelumnya.{" "}
-          <button type="button" onClick={removeSampleRuns} className="underline underline-offset-4">
-            Hapus data contoh
-          </button>
-        </p>
-      )}
-
-      <Hero today={today} entries={entries} onEdit={openEdit} onRun={openRun} syncSlot={<SyncControl />} />
+    <>
+      <Hero today={today} entries={entries} onEdit={openEdit} onRun={openRun} />
       <RunConditions />
-      <WeekPlan today={today} entries={entries} plan={prefs.plan} onToast={setToast} />
       <Calendar
         entries={entries}
         gear={gear}
@@ -261,25 +153,6 @@ export default function Tracker() {
         onEdit={openEdit}
         onDelete={handleDelete}
       />
-      <Quests today={today} entries={entries} plan={prefs.plan} />
-      <RaceMode today={today} entries={entries} race={prefs.race} />
-      <AiCoach today={today} entries={entries} plan={prefs.plan} race={prefs.race} onToast={setToast} />
-      <TemanLari today={today} entries={entries} onToast={setToast} />
-      <Feed onToast={setToast} />
-      <Gear gear={gear} entries={entries} />
-      <Recap today={today} entries={entries} gear={gear} onToast={setToast} />
-
-      <footer className="bg-biru text-kertas">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-x-8 gap-y-3 px-4 py-6 font-mono text-sm sm:px-8">
-          <p>
-            &copy; 2026 Pelari Kalcer · Dibuat oleh{" "}
-            <a href="https://github.com/negoblette" className="underline underline-offset-4 hover:text-marka">
-              Nello Aurelius
-            </a>
-          </p>
-          <DataLinks onToast={setToast} />
-        </div>
-      </footer>
 
       {form && (
         <DayForm
@@ -293,27 +166,10 @@ export default function Tracker() {
           onClose={() => setForm(null)}
         />
       )}
-
-      {toast && (
-        <div
-          role="status"
-          className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center justify-between gap-4 bg-aspal px-4 py-3 text-kertas shadow-2xl"
-        >
-          <span className="text-sm font-medium">{toast.message}</span>
-          {toast.undo && (
-            <button
-              type="button"
-              onClick={() => {
-                toast.undo();
-                setToast(null);
-              }}
-              className="text-sm font-bold text-marka underline underline-offset-4"
-            >
-              Batalkan
-            </button>
-          )}
-        </div>
-      )}
-    </main>
+    </>
   );
+}
+
+export default function Tracker() {
+  return <AppShell>{(app) => <Dashboard {...app} />}</AppShell>;
 }

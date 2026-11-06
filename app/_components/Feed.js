@@ -162,16 +162,21 @@ export default function Feed({ onToast }) {
     };
   }, [load]);
 
-  if (!syncConfigured || !user) return null;
-
   return (
-    <section id="feed" className="scroll-mt-4 bg-biru py-16 text-kertas lg:py-24">
+    <section className="min-h-[70dvh] bg-biru py-12 text-kertas lg:py-16">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
-        <h2 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
+        <h1 className="font-display text-[clamp(3.5rem,8vw,7rem)] font-black uppercase leading-[0.88]">
           Feed lari
-        </h2>
+        </h1>
         <p className="mt-3 font-mono text-sm">Lari kamu dan teman, 50 terbaru</p>
 
+        {!user && (
+          <p className="mt-5 max-w-lg text-lg leading-relaxed">
+            {syncConfigured
+              ? "Masuk lewat tombol di bagian atas halaman untuk melihat lari teman."
+              : "Feed belum aktif di perangkat ini."}
+          </p>
+        )}
         {failed && <p className="mt-5">Feed belum bisa dimuat. Coba lagi nanti.</p>}
         {posts?.length === 0 && (
           <p className="mt-5 max-w-lg text-lg leading-relaxed">

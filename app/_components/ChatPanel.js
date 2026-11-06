@@ -11,8 +11,10 @@ function timeLabel(iso) {
   return `${String(date.getHours()).padStart(2, "0")}.${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export default function ChatDialog({ friend, userId, onClose }) {
-  const dialogRef = useRef(null);
+export default function ChatPanel({ friend, userId, onClose }) {
+  const panelRef = useRef(null);
+  const inputRef = useRef(null);
+  const lastRead = useRef(null);
   const listRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -24,16 +26,19 @@ export default function ChatDialog({ friend, userId, onClose }) {
       const rows = await listMessages(userId, friend.id);
       setMessages((current) => (current.at(-1)?.id === rows.at(-1)?.id ? current : rows));
       setFailed(false);
-      if (rows.some((row) => row.sender === friend.id)) await markRead(friend.id);
+      const latest = rows.findLast((row) => row.sender === friend.id);
+      if (latest && latest.id !== lastRead.current) {
+        lastRead.current = latest.id;
+        await markRead(friend.id);
+      }
     } catch {
       setFailed(true);
     }
   }, [friend.id, userId]);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    dialog.showModal();
-    return () => dialog.close();
+    panelRef.current.scrollIntoView({ block: "start" });
+    if (window.matchMedia("(min-width: 1024px)").matches) inputRef.current.focus({ preventScroll: true });
   }, []);
 
   useEffect(() => {
@@ -66,15 +71,14 @@ export default function ChatDialog({ friend, userId, onClose }) {
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      onCancel={onClose}
+    <section
+      ref={panelRef}
       aria-labelledby="chat-title"
-      className="m-auto h-[min(36rem,calc(100dvh-1.5rem))] w-[calc(100%-2rem)] max-w-md bg-kertas p-0 text-aspal backdrop:bg-biru/80"
+      className="h-[min(38rem,calc(100dvh-7.5rem))] scroll-mt-24 bg-kertas text-aspal"
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3 bg-oranye px-4 py-3">
-          <Avatar seed={friend.avatar} size={40} />
+          <Avatar seed={friend.avatar} size={40} className="ring-2 ring-kertas" />
           <h2
             id="chat-title"
             className="min-w-0 flex-1 truncate font-display text-3xl font-black uppercase leading-none"
@@ -111,7 +115,7 @@ export default function ChatDialog({ friend, userId, onClose }) {
 
         <form onSubmit={submit} className="flex gap-2 border-t-2 border-aspal p-3">
           <input
-            autoFocus
+            ref={inputRef}
             aria-label="Tulis pesan"
             maxLength={1000}
             placeholder="Tulis pesan"
@@ -128,6 +132,6 @@ export default function ChatDialog({ friend, userId, onClose }) {
           </button>
         </form>
       </div>
-    </dialog>
+    </section>
   );
 }
