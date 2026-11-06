@@ -159,11 +159,14 @@ export function startSync() {
   window.addEventListener("focus", syncNow);
 }
 
-export async function sendMagicLink(email) {
-  const { error } = await getClient().auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${window.location.origin}/` },
-  });
+// A typed code works inside an app installed on an iPhone, where an email link would open Safari instead.
+export async function sendLoginCode(email) {
+  const { error } = await getClient().auth.signInWithOtp({ email });
+  if (error) throw error;
+}
+
+export async function verifyLoginCode(email, token) {
+  const { error } = await getClient().auth.verifyOtp({ email, token, type: "email" });
   if (error) throw error;
 }
 

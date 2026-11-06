@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  sendMagicLink,
+  sendLoginCode,
   signOut,
   startSync,
   syncConfigured,
   syncNow,
   useSyncStatus,
+  verifyLoginCode,
 } from "./sync";
 
 const LABELS = {
@@ -28,6 +29,7 @@ function SyncDialog({ status, onClose }) {
   const dialogRef = useRef(null);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,16 +44,35 @@ function SyncDialog({ status, onClose }) {
     setBusy(true);
     setError("");
     try {
-      await sendMagicLink(email.trim());
+      await sendLoginCode(email.trim());
+      setCode("");
       setSent(true);
     } catch (failure) {
       setError(
         failure?.status === 429
-          ? "Terlalu sering meminta tautan. Tunggu beberapa menit."
-          : "Tautan gagal dikirim. Cek koneksi dan alamat email kamu.",
+          ? "Terlalu sering meminta kode. Tunggu sampai satu jam, lalu coba lagi."
+          : "Kode gagal dikirim. Cek koneksi dan alamat email kamu.",
       );
     }
     setBusy(false);
+  }
+
+  async function handleVerify(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await verifyLoginCode(email.trim(), code.trim());
+      setBusy(false);
+      onClose();
+    } catch (failure) {
+      setBusy(false);
+      setError(
+        failure?.status === 429
+          ? "Terlalu banyak percobaan. Tunggu beberapa menit."
+          : "Kode salah atau sudah kedaluwarsa. Periksa lagi atau minta kode baru.",
+      );
+    }
   }
 
   async function handleSignOut() {
@@ -107,10 +128,45 @@ function SyncDialog({ status, onClose }) {
           </div>
         </>
       ) : sent ? (
-        <p className="mt-4 leading-relaxed">
-          Tautan masuk dikirim ke <strong className="break-all">{email}</strong>. Buka
-          emailnya di perangkat ini, lalu klik tautannya.
-        </p>
+        <form onSubmit={handleVerify}>
+          <p className="mt-3 leading-relaxed text-aspal/80">
+            Kode masuk dikirim ke <strong className="break-all">{email}</strong>. Salin dari
+            email, lalu ketik di sini.
+          </p>
+          <label className="mt-5 block font-mono text-xs text-aspal/70">
+            Kode masuk
+            <input
+              required
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={10}
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+              className="mt-1.5 h-14 w-full rounded-md border-2 border-aspal bg-white px-3 text-center font-display text-4xl font-black tracking-[0.2em] text-aspal outline-none focus:border-biru"
+            />
+          </label>
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSent(false);
+                setError("");
+              }}
+              className="text-sm font-medium underline underline-offset-4"
+            >
+              Ganti email
+            </button>
+            <button
+              type="submit"
+              disabled={busy || !code}
+              className="h-11 rounded-md bg-oranye px-5 font-display text-xl font-extrabold uppercase text-aspal hover:bg-biru hover:text-kertas disabled:opacity-50"
+            >
+              {busy ? "Memeriksa" : "Masuk"}
+            </button>
+          </div>
+        </form>
       ) : (
         <form onSubmit={handleSend}>
           <p className="mt-3 leading-relaxed text-aspal/80">
@@ -135,7 +191,7 @@ function SyncDialog({ status, onClose }) {
               disabled={busy}
               className="h-11 rounded-md bg-oranye px-5 font-display text-xl font-extrabold uppercase text-aspal hover:bg-biru hover:text-kertas disabled:opacity-50"
             >
-              {busy ? "Mengirim" : "Kirim tautan"}
+              {busy ? "Mengirim" : "Kirim kode"}
             </button>
           </div>
         </form>
