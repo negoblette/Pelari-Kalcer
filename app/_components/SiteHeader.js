@@ -59,13 +59,14 @@ function useFriendSummary(userId) {
   return userId ? summary : null;
 }
 
-function NavLink({ href, label, current, alerts }) {
+function NavLink({ href, label, current, alerts, onClick }) {
   return (
     <li>
       <Link
         href={href}
         aria-current={current ? "page" : undefined}
         aria-label={alerts ? `${label}, ${alerts} baru` : undefined}
+        onClick={onClick}
         className={`flex items-center gap-1.5 py-1 hover:text-marka ${current ? "text-marka" : ""}`}
       >
         <span className={current ? "underline decoration-2 underline-offset-6" : ""}>{label}</span>
@@ -85,10 +86,15 @@ export default function SiteHeader() {
   const summary = useFriendSummary(user?.id);
   const onProfile = pathname === "/profil";
 
+  // Next.js keeps the scroll position when a link points at the page already open.
+  function backToTop(href) {
+    if (pathname === href) window.scrollTo({ top: 0 });
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b border-white/15 bg-biru text-kertas">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-3 px-4 py-1.5 sm:gap-x-6 sm:px-8">
-        <Link href="/" className="font-display text-xl font-black uppercase tracking-wide hover:text-marka sm:text-2xl">
+        <Link href="/" onClick={() => backToTop("/")} className="font-display text-xl font-black uppercase tracking-wide hover:text-marka sm:text-2xl">
           Pelari Kalcer
         </Link>
 
@@ -100,6 +106,7 @@ export default function SiteHeader() {
                 {...link}
                 current={pathname === link.href}
                 alerts={link.href === "/teman" ? summary?.alerts : 0}
+                onClick={() => backToTop(link.href)}
               />
             ))}
           </ul>
