@@ -2,7 +2,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
+import { buildStats } from "./insights";
 import { mergeGoal, mergeRuns } from "./merge";
+import { localDateKey } from "./stats";
 import { applySynced, getTracker, onLocalChange, resetTracker } from "./store";
 
 const URL_VALUE = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,6 +43,21 @@ function getClient() {
   if (!syncConfigured) return null;
   client ??= createClient(URL_VALUE, KEY_VALUE);
   return client;
+}
+
+export function getSupabase() {
+  return getClient();
+}
+
+// Friends read this summary. A failure here never counts against the sync of the runs themselves.
+async function publishStats(supabase, userId) {
+  await supabase
+    .from("profiles")
+    .update({
+      stats: buildStats(getTracker().runs, localDateKey(new Date())),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
 }
 
 async function fetchRemoteRuns(supabase) {
@@ -110,6 +127,8 @@ async function runSync() {
     });
     if (error) throw error;
   }
+
+  await publishStats(supabase, user.id);
 }
 
 export async function syncNow() {

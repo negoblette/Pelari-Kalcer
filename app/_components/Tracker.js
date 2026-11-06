@@ -12,6 +12,7 @@ import Recap from "./Recap";
 import RunConditions from "./RunConditions";
 import WeekPlan from "./WeekPlan";
 import SyncControl from "./SyncControl";
+import TemanLari from "./TemanLari";
 import TrackerBib from "./TrackerBib";
 import {
   entryForDate,
@@ -39,6 +40,7 @@ const LINKS = [
   { href: "#kalender", label: "Kalender" },
   { href: "#quest", label: "Quest" },
   { href: "#race", label: "Race" },
+  { href: "#teman", label: "Teman" },
   { href: "#gear", label: "Gear" },
   { href: "#recap", label: "Recap" },
 ];
@@ -249,6 +251,7 @@ export default function Tracker() {
       />
       <Quests today={today} entries={entries} plan={prefs.plan} />
       <RaceMode today={today} entries={entries} race={prefs.race} />
+      <TemanLari today={today} entries={entries} onToast={setToast} />
       <Gear gear={gear} entries={entries} />
       <Recap today={today} entries={entries} gear={gear} onToast={setToast} />
 

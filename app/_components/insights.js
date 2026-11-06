@@ -172,6 +172,38 @@ export function periodLabel(prefix) {
   return `${MONTH_NAMES[Number(prefix.slice(5, 7)) - 1]} ${prefix.slice(0, 4)}`;
 }
 
+// The summary friends can see. Routes, notes and single runs never leave the private table.
+export function buildStats(entries, today) {
+  const own = entries.filter((entry) => !entry.sample);
+  const entered = weekDays(own, today)
+    .map((day) => day.entry)
+    .filter(Boolean);
+  const summary = detailSummary(entered);
+  const entry = entryForDate(own, today);
+  return {
+    date: today,
+    weekStart: mondayOf(today),
+    weekKm: Math.round(summary.km * 10) / 10,
+    weekRuns: entered.filter(isRunEntry).length,
+    pace: Math.round(summary.pace),
+    streak: weekStreak(own, today),
+    status: entry ? (isRunEntry(entry) ? "run" : "rest") : null,
+  };
+}
+
+// A friend's summary was saved on their last sync, so old weeks must not read as this week.
+export function friendView(stats, today) {
+  const thisWeek = mondayOf(today);
+  const current = stats.weekStart === thisWeek;
+  const lastWeek = stats.weekStart === addDays(thisWeek, -7);
+  return {
+    weekKm: current ? (stats.weekKm ?? 0) : 0,
+    pace: current ? (stats.pace ?? 0) : 0,
+    streak: current || lastWeek ? (stats.streak ?? 0) : 0,
+    status: stats.date === today ? stats.status : null,
+  };
+}
+
 export function todayEntry(entries, today) {
   return entryForDate(entries, today);
 }
