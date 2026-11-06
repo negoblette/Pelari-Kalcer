@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Calendar from "./Calendar";
 import Countdown from "./Countdown";
@@ -116,8 +117,11 @@ function Hero({ today, entries, onEdit, onRun, syncSlot }) {
               </li>
             ))}
           </ul>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Countdown />
+            <Link href="/profil" className="text-sm font-medium underline underline-offset-4 hover:text-marka">
+              Profil
+            </Link>
             {syncSlot}
           </div>
         </nav>

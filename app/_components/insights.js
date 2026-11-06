@@ -1,3 +1,4 @@
+import { RUN_TYPES } from "./runTypes";
 import {
   MONTH_NAMES,
   addDays,
@@ -201,6 +202,53 @@ export function friendView(stats, today) {
     pace: current ? (stats.pace ?? 0) : 0,
     streak: current || lastWeek ? (stats.streak ?? 0) : 0,
     status: stats.date === today ? stats.status : null,
+  };
+}
+
+function bestWeekStreak(runs) {
+  const weeks = [...new Set(runs.map((run) => mondayOf(run.date)))].sort();
+  let best = 0;
+  let current = 0;
+  let previous = null;
+  for (const week of weeks) {
+    current = previous && addDays(previous, 7) === week ? current + 1 : 1;
+    best = Math.max(best, current);
+    previous = week;
+  }
+  return best;
+}
+
+export function lifetimeSummary(entries) {
+  const runs = entries.filter(isRunEntry);
+  const details = runs.filter(hasDetail);
+  const timed = details.filter((entry) => entry.seconds > 0);
+  const summary = detailSummary(runs);
+  const fastest = timed
+    .filter((entry) => entry.km >= 1)
+    .reduce((top, entry) => {
+      const pace = entry.seconds / entry.km;
+      return !top || pace < top.pace ? { pace, km: entry.km, date: entry.date } : top;
+    }, null);
+
+  return {
+    km: summary.km,
+    pace: summary.pace,
+    seconds: timed.reduce((sum, entry) => sum + entry.seconds, 0),
+    runs: runs.length,
+    rests: entries.length - runs.length,
+    longest: details.reduce((top, entry) => (entry.km > (top?.km ?? 0) ? entry : top), null),
+    fastest,
+    bestStreak: bestWeekStreak(runs),
+    firstDate: entries.map((entry) => entry.date).sort()[0] ?? null,
+    types: RUN_TYPES.map(({ id, label }) => {
+      const list = runs.filter((entry) => entry.runType === id);
+      return {
+        id,
+        label,
+        count: list.length,
+        km: list.reduce((sum, entry) => sum + (entry.km || 0), 0),
+      };
+    }),
   };
 }
 

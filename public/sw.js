@@ -1,4 +1,4 @@
-const CACHE = "pelari-kalcer-v1";
+const CACHE = "pelari-kalcer-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add("/")));
@@ -24,10 +24,10 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put("/", copy));
+          caches.open(CACHE).then((cache) => cache.put(url.pathname, copy));
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() => caches.match(url.pathname).then((cached) => cached ?? caches.match("/"))),
     );
     return;
   }

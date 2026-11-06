@@ -24,6 +24,26 @@ function QuestRow({ quest }) {
   );
 }
 
+export function BadgeList({ badges, className }) {
+  return (
+    <ul className={className}>
+      {badges.map((badge) => (
+        <li
+          key={badge.id}
+          className={`flex h-24 flex-col justify-between p-3 ${
+            badge.done ? "bg-marka text-aspal" : "border-2 border-kertas/40 text-kertas/80"
+          }`}
+        >
+          <span className="font-mono text-xs">{badge.done ? "Terkumpul" : "Terkunci"}</span>
+          <span className="font-display text-2xl font-black uppercase leading-none">
+            {badge.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function Quests({ today, entries, plan }) {
   const quests = weeklyQuests(entries, plan, today);
   const badges = lifetimeBadges(entries, today);
@@ -54,21 +74,7 @@ export default function Quests({ today, entries, plan }) {
           <p className="mt-3 font-mono text-sm">
             {earned} dari {badges.length} terkumpul
           </p>
-          <ul className="mt-6 grid grid-cols-2 gap-2">
-            {badges.map((badge) => (
-              <li
-                key={badge.id}
-                className={`flex h-24 flex-col justify-between p-3 ${
-                  badge.done ? "bg-marka text-aspal" : "border-2 border-kertas/40 text-kertas/80"
-                }`}
-              >
-                <span className="font-mono text-xs">{badge.done ? "Terkumpul" : "Terkunci"}</span>
-                <span className="font-display text-2xl font-black uppercase leading-none">
-                  {badge.title}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <BadgeList badges={badges} className="mt-6 grid grid-cols-2 gap-2" />
         </div>
       </div>
     </section>
