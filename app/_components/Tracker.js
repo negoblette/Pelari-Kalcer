@@ -21,6 +21,7 @@ import {
   fullDate,
   hasDetail,
   isRunEntry,
+  lastGearId,
   weekDays,
   weekStreak,
 } from "./stats";
@@ -63,11 +64,11 @@ function streakNote(streak, ranThisWeek) {
   return "Satu lari minggu ini sudah memulai streak.";
 }
 
-function TodayCheckIn({ today, entry, onEdit }) {
+function TodayCheckIn({ today, entry, onEdit, onRun }) {
   if (!entry) {
     return (
       <div className="grid max-w-xl gap-3 sm:grid-cols-2">
-        <button type="button" onClick={() => checkIn(today, "run")} className={PRIMARY}>
+        <button type="button" onClick={() => onRun(today)} className={PRIMARY}>
           Lari
         </button>
         <button type="button" onClick={() => checkIn(today, "rest")} className={SECONDARY}>
@@ -85,7 +86,7 @@ function TodayCheckIn({ today, entry, onEdit }) {
       </button>
       <button
         type="button"
-        onClick={() => checkIn(today, run ? "rest" : "run")}
+        onClick={() => (run ? checkIn(today, "rest") : onRun(today))}
         className={SECONDARY}
       >
         {run ? "Ganti rest" : "Ganti lari"}
@@ -94,7 +95,7 @@ function TodayCheckIn({ today, entry, onEdit }) {
   );
 }
 
-function Hero({ today, entries, onEdit, syncSlot }) {
+function Hero({ today, entries, onEdit, onRun, syncSlot }) {
   const entry = entryForDate(entries, today);
   const week = weekDays(entries, today);
   const streak = weekStreak(entries, today);
@@ -139,7 +140,7 @@ function Hero({ today, entries, onEdit, syncSlot }) {
               {streakNote(streak, ranThisWeek)}
             </p>
             <div className="mt-8">
-              <TodayCheckIn today={today} entry={entry} onEdit={onEdit} />
+              <TodayCheckIn today={today} entry={entry} onEdit={onEdit} onRun={onRun} />
             </div>
           </div>
 
@@ -189,7 +190,7 @@ export default function Tracker() {
   const tracker = useTracker();
   const today = useToday();
   const [pickedDate, setPickedDate] = useState(null);
-  const [formDate, setFormDate] = useState(null);
+  const [form, setForm] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -214,9 +215,12 @@ export default function Tracker() {
     });
   }
 
+  const openEdit = (date) => setForm({ date, forceRun: false });
+  const openRun = (date) => setForm({ date, forceRun: true });
+
   function handleSave(entry) {
     saveRun(entry);
-    setFormDate(null);
+    setForm(null);
     setToast({ message: `Absen ${fullDate(entry.date)} tersimpan.` });
   }
 
@@ -236,7 +240,7 @@ export default function Tracker() {
         </p>
       )}
 
-      <Hero today={today} entries={entries} onEdit={setFormDate} syncSlot={<SyncControl />} />
+      <Hero today={today} entries={entries} onEdit={openEdit} onRun={openRun} syncSlot={<SyncControl />} />
       <RunConditions />
       <WeekPlan today={today} entries={entries} plan={prefs.plan} onToast={setToast} />
       <Calendar
@@ -245,8 +249,8 @@ export default function Tracker() {
         today={today}
         selected={selected}
         onSelect={setPickedDate}
-        onCheckIn={checkIn}
-        onEdit={setFormDate}
+        onCheckIn={(date, type) => (type === "run" ? openRun(date) : checkIn(date, type))}
+        onEdit={openEdit}
         onDelete={handleDelete}
       />
       <Quests today={today} entries={entries} plan={prefs.plan} />
@@ -257,19 +261,26 @@ export default function Tracker() {
 
       <footer className="bg-biru text-kertas">
         <div className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-x-8 gap-y-3 px-4 py-6 font-mono text-sm sm:px-8">
-          <p>Dibuat buat yang larinya pelan tapi niat.</p>
+          <p>
+            &copy; 2026 Pelari Kalcer · Dibuat oleh{" "}
+            <a href="https://github.com/negoblette" className="underline underline-offset-4 hover:text-marka">
+              Nello Aurelius
+            </a>
+          </p>
           <DataLinks onToast={setToast} />
         </div>
       </footer>
 
-      {formDate && (
+      {form && (
         <DayForm
-          key={formDate}
-          date={formDate}
-          entry={entryForDate(entries, formDate)}
+          key={form.date}
+          date={form.date}
+          entry={entryForDate(entries, form.date)}
           gear={gear}
+          defaultGearId={lastGearId(entries, gear)}
+          forceRun={form.forceRun}
           onSave={handleSave}
-          onClose={() => setFormDate(null)}
+          onClose={() => setForm(null)}
         />
       )}
 

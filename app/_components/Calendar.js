@@ -14,6 +14,7 @@ import {
   isRunEntry,
   monthCells,
 } from "./stats";
+import { runTypeLabel, runTypeShort, workoutRows } from "./runTypes";
 
 function cellStyle(entry) {
   if (!entry) return "bg-white hover:bg-aspal/10";
@@ -61,12 +62,16 @@ function DayReceipt({ date, entry, gear, today, onCheckIn, onEdit, onDelete }) {
           <Row label="Status" value={entry ? (run ? "Lari" : "Rest") : "Belum absen"} />
           {run && (
             <>
+              <Row label="Tipe" value={runTypeLabel(entry.runType)} />
               <Row label="Jarak" value={entry.km ? `${formatDistance(entry.km)} km` : "Belum diisi"} />
               <Row label="Waktu" value={entry.seconds ? formatClock(entry.seconds) : "Belum diisi"} />
               <Row
                 label="Pace"
                 value={entry.km && entry.seconds ? `${formatClock(entry.seconds / entry.km)}/km` : "Belum diisi"}
               />
+              {workoutRows(entry, { formatClock, formatDistance }).map(([label, value]) => (
+                <Row key={label} label={label} value={value} />
+              ))}
               <Row label="Gear" value={item?.name ?? "–"} />
               <Row label="Rasanya" value={FEELS[entry.feel] ?? "–"} />
             </>
@@ -193,8 +198,13 @@ export default function Calendar({ entries, gear, today, selected, onSelect, onC
                     future ? "bg-aspal/5 text-aspal/40" : cellStyle(entry)
                   } ${isSelected ? "ring-3 ring-aspal ring-offset-2 ring-offset-kertas" : ""}`}
                 >
-                  <span className={`font-mono text-xs sm:text-sm ${date === today ? "font-medium underline underline-offset-4" : ""}`}>
-                    {Number(date.slice(8))}
+                  <span className="flex w-full justify-between gap-1 font-mono text-xs sm:text-sm">
+                    <span className={date === today ? "font-medium underline underline-offset-4" : ""}>
+                      {Number(date.slice(8))}
+                    </span>
+                    {entry?.runType && isRunEntry(entry) && (
+                      <span className="hidden text-xs lg:block">{runTypeShort(entry.runType)}</span>
+                    )}
                   </span>
                   <span className="font-display text-base font-black uppercase leading-none sm:text-3xl">
                     {cellLabel(entry)}

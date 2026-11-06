@@ -115,6 +115,14 @@ export function monthCells(year, month) {
   };
 }
 
+export function lastGearId(entries, gear) {
+  const active = new Set(gear.filter((item) => !item.retired).map((item) => item.id));
+  const latest = entries
+    .filter((entry) => active.has(entry.gearId))
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  return latest?.gearId ?? (gear.length === 1 && active.size ? gear[0].id : undefined);
+}
+
 export function gearMileage(item, entries) {
   const logged = entries
     .filter((entry) => entry.gearId === item.id && isRunEntry(entry))
