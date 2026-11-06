@@ -402,7 +402,7 @@ export default function TemanLari({ today, entries, onToast }) {
             ) : (
               <div className="flex h-[min(38rem,calc(100dvh-7.5rem))] items-center justify-center bg-kertas p-6 text-center">
                 <p className="font-display text-4xl font-black uppercase leading-none">
-                  {accepted.length ? "Pilih teman untuk chat" : "Chat muncul di sini"}
+                  {accepted.length ? "Pilih teman untuk chat" : "Belum ada teman"}
                 </p>
               </div>
             )}

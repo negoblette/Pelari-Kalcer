@@ -87,8 +87,8 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/15 bg-biru text-kertas">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-6 px-4 py-1.5 sm:px-8">
-        <Link href="/" className="font-display text-2xl font-black uppercase tracking-wide hover:text-marka">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-3 px-4 py-1.5 sm:gap-x-6 sm:px-8">
+        <Link href="/" className="font-display text-xl font-black uppercase tracking-wide hover:text-marka sm:text-2xl">
           Pelari Kalcer
         </Link>
 
@@ -105,7 +105,7 @@ export default function SiteHeader() {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Clock />
           <Link
             href="/profil"

@@ -11,11 +11,12 @@ function currentTime() {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${hours}.${minutes}`;
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  return `${hours}.${minutes}.${seconds}`;
 }
 
 export default function Clock() {
   const time = useSyncExternalStore(subscribe, currentTime, () => null);
 
-  return <p className="font-mono text-sm tabular-nums">{time ?? "--.--"}</p>;
+  return <p className="font-mono text-sm tabular-nums">{time ?? "--.--.--"}</p>;
 }
